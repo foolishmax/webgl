@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  <canvas width="500" height="500" id="canvasEl"></canvas>
+
+  <script type="webgl" id="vertext" data-desc="顶点着色器">
+    attribute vec2 a_position;
+    attribute vec4 a_color;
+    uniform vec2 screenSize;
+    varying vec4 v_color;
+    void main() {
+      // 坐标转换
+      float x = a_position.x * 2.0 / screenSize.x - 1.0;
+      float y = 1.0 - (a_position.y * 2.0 / screenSize.y);
+      // 设置坐标
+      gl_Position = vec4(x, y, 0.0, 1.0);
+      // 设置点的大小
+      gl_PointSize = 10.0;
+      // 设置颜色
+      v_color = a_color;
+    }
+  </script>
+
+  <script type="webgl" id="fragment" data-desc="片元着色器">
+    precision mediump float;
+    varying vec4 v_color;
+    void main() {
+      // 设置颜色
+      gl_FragColor = v_color;
+    }
+  </script>
+
+  <script>
+    var canvas = document.getElementById('canvasEl');
+    var gl = canvas.getContext('webgl');
+
+    if(!gl) {
+        alert('你的浏览器不支持webgl');
+    }
+
+    // 创建着色器
+    function createShader(gl, type, source) {
+        // 创建着色器
+        const shader = gl.createShader(type);
+        // 绑定着色器添加资源
+        gl.shaderSource(shader, source);
+        // 编译着色器
+        gl.compileShader(shader);
+
+        // 检查着色器是否编译成功
+        const success = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
+        if(success) {
+            return shader;
+        }
+        console.log(gl.getShaderInfoLog(shader));
+    }
+
+    const vertex = document.getElementById('vertext').innerText;
+    const fragment = document.getElementById('fragment').innerText;
+
+    console.log(vertex, fragment);
+
+    // 创建着色器
+    const vertexShader = createShader(gl, gl.VERTEX_SHADER, vertex);
+    const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragment);
+
+    // 创建程序
+    const program = gl.createProgram();
+    // 绑定着色器
+    gl.attachShader(program, vertexShader);
+    gl.attachShader(program, fragmentShader);
+
+    // 链接程序
+    gl.linkProgram(program);
+
+    // 使用程序
+    gl.useProgram(program);
+
+    // 清空画布
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    const a_position = gl.getAttribLocation(program, 'a_position');
+    const screenSize = gl.getUniformLocation(program, 'screenSize');
+    const a_color = gl.getAttribLocation(program, 'a_color');
+
+    gl.uniform2f(screenSize, canvas.width, canvas.height);
+
+    let points = [];
+    canvas.onmousedown = function(e) {
+      const x = e.clientX;
+      const y = e.clientY;
+      const color = [Math.random(), Math.random(), Math.random(), 1.0];
+
+      points.push({x, y, color});
+
+      for(let i = 0; i < points.length; i++) {
+        gl.vertexAttrib3f(a_position, points[i].x, points[i].y, 0.0);
+        gl.vertexAttrib4f(a_color, points[i].color[0], points[i].color[1], points[i].color[2], points[i].color[3]);
+        // 绘制点
+        gl.drawArrays(gl.POINTS, 0, 1);
+      }
+
+    }
+  </script>
+</body>
+</html>
